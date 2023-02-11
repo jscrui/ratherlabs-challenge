@@ -6,7 +6,8 @@ Please follow these steps to set up the project:
 
 1) Clone the repository to your local machine.
 2) Run `npm i` to install the necessary dependencies.
-3) Create a `.env` file in the root folder and add the following line: `ALCHEMY_PRIVATE_KEY="Your-alchemy-private-key"`
+3) Create a `.env` file in the root folder and add the following line: `ALCHEMY_PRIVATE_KEY="Your-alchemy-private-key"`.
+
     You can get an Alchemy private key here: https://dashboard.alchemy.com/
 
 4) Open a terminal on the root folder and run `npx hardhat test`, if everything is correct, you will see all the hardaht unit testing passed.
