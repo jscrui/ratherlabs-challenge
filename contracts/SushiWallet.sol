@@ -159,7 +159,7 @@ contract SushiWallet is Ownable {
      */
     function emergencyWithdraw(uint256 _poolId, bool isMasterchefV2) onlyOwner public {                
 
-        /** STEP ONE -> Withdraw from Masterchef or MasterchefV2 */
+        /** Withdraw from Masterchef or MasterchefV2 */
         if (isMasterchefV2) {            
             masterchefV2.emergencyWithdraw(_poolId, address(this));
         }else {
@@ -176,7 +176,9 @@ contract SushiWallet is Ownable {
      *      
      * @param _poolId the pid of the pool to harvest.
      */
-    function harvestRewards(uint256 _poolId) onlyOwner public {                                
+    function harvestRewards(uint256 _poolId) onlyOwner public {     
+
+        /** Harverst rewards from MasterchefV2 */                           
         masterchefV2.harvest(_poolId, address(this));   
 
         emit HarvestedRewards(_poolId);
@@ -192,6 +194,7 @@ contract SushiWallet is Ownable {
         require(_amount > 0, "SushiWallet: INVALID_AMOUNT");        
         require(_amount <= IERC20(_token).balanceOf(address(this)), "SushiWallet: INSUFFICIENT_BALANCE");
         
+        /** Transfer tokens from SushiWallet to Owner */
         IERC20(_token).safeTransfer(msg.sender, _amount);
 
         emit Withdraw(_token, _amount, msg.sender);
