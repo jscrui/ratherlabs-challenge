@@ -18,11 +18,11 @@ contract SushiWallet is Ownable {
     IMasterChef public masterchef;   
     IMiniChefV2 public masterchefV2;     
             
-    event Withdraw(address indexed token, uint256 indexed amount);
-    event LiquidityAdded(address indexed lpToken, uint256 indexed amountA, uint256 indexed amountB);
-    event LiquidityRemoved(address indexed lpToken, uint256 indexed amountA, uint256 indexed amountB);
-    event harvestedRewards(address indexed tokenEarned);
-    
+    event Withdraw(address indexed token, uint256 indexed amount, address indexed to);
+    event LiquidityAdded(address indexed lpToken, uint256 indexed lpTokenAmount);
+    event LiquidityRemoved(address indexed lpToken, uint256 indexed amount);
+    event EmergencyWithdraw(uint256 indexed poolId, bool isMasterchefV2);
+    event HarvestedRewards(uint256 indexed poolId);
     event NewRouter(address indexed router);
     event NewMasterchef(address indexed masterchef);
     event NewMasterchefV2(address indexed masterchefV2);
@@ -35,195 +35,159 @@ contract SushiWallet is Ownable {
     
     /**
      * @dev When you call this function you are providing liquidity and then deposit the LP token in the Masterchef.
-     *      This function does not emit any event, as the Router is already emitting events for the liquidity added.
+     *      NOTE: The event emited in this function can be avoided, as the Router and Masterchef are already emitting events for this interactions.
      * 
      * @param tokenA Address of the token A
      * @param tokenB Address of the token B
      * @param amountA Amount of token A
      * @param amountB Amount of token B
-     * @param slippage The diff between the expected and the realized deposited amount in percentage, only from 0 to 100 where 0 means no slippage and 100 means no limit.
-     * @param _pid If you know the pid of the pool you can pass it, otherwise it will be calculated.
-     *             Note: if you pass 0 because you want the _pid 0 it will be calculated anyways but that behaviour should be improved.
+     * @param minAmountA Minimum amount of token A to add liquidity
+     * @param minAmountB Minimum amount of token B to add liquidity
+     * @param _poolId If you know the pid of the pool you can pass it, otherwise it will be calculated.
+     *             Note: if you pass 0 because you want the _poolId 0 it will be calculated anyways but that behaviour should be improved.
      * @param isMasterchefV2 true if the pool is in masterchefV2, false if it is in masterchef.
      */
-    function addLiquidity(address tokenA, address tokenB, uint amountA, uint amountB, uint slippage, uint _pid, bool isMasterchefV2) onlyOwner public {                
-        require(tokenA != tokenB, 'Error: TOKEN A == TOKEN B');
-        require(IERC20(tokenA).balanceOf(address(this)) >= amountA, 'Insufficient balance: TOKEN A');
-        require(IERC20(tokenB).balanceOf(address(this)) >= amountB, 'Insufficient balance: TOKEN B');
-        require(slippage >= 0 && slippage <= 100, 'Slippage: OUT_OF_LIMITS');
+    function addLiquidity(address tokenA, address tokenB, uint amountA, uint amountB, uint minAmountA, uint256 minAmountB, uint _poolId, bool isMasterchefV2) onlyOwner public {                
+        require(tokenA != tokenB, "SushiWallet: TOKEN_A_EQUALS_TOKEN_B");        
+        require(tokenA != address(0), "SushiWallet: INVALID_TOKEN_A_ADDRESS");
+        require(tokenB != address(0), "SushiWallet: INVALID_TOKEN_B_ADDRESS");
+        require(amountA > 0, "SushiWallet: INVALID_AMOUNT_A");
+        require(amountB > 0, "SushiWallet: INVALID_AMOUNT_B");
+        require(minAmountA >= 0 && minAmountA <= amountA, "SushiWallet: INVALID_MIN_AMOUNT_A");
+        require(minAmountB >= 0 && minAmountB <= amountB, "SushiWallet: INVALID_MIN_AMOUNT_B");
+        require(IERC20(tokenA).balanceOf(address(this)) >= amountA, 'SushiWallet: INSUFFICIENT_BALANCE_TOKEN_A');
+        require(IERC20(tokenB).balanceOf(address(this)) >= amountB, 'SushiWallet: INSUFFICIENT_BALANCE_TOKEN_B');            
 
-        /** STEP ONE  -> Approve tokens */     
+        /** STEP ONE -> Approve tokens */
         IERC20(tokenA).approve(address(router), amountA);                   
         IERC20(tokenB).approve(address(router), amountB);        
 
-        /** STEP TWO -> Calculate slippage  */
-        uint amountAmin = amountA - (amountA * slippage / 100);
-        uint amountBmin = amountB - (amountB * slippage / 100);
-
-        /** STEP THREE -> Add Liquidity */                
-        IUniswapV2Router02(router).addLiquidity(tokenA, tokenB, amountA, amountB, amountAmin, amountBmin, address(this), block.timestamp);                        
+        /** STEP THREE -> Add Liquidity */
+        IUniswapV2Router02(router).addLiquidity(tokenA, tokenB, amountA, amountB, minAmountA, minAmountB, address(this), block.timestamp);                        
 
         /** STEP FOUR -> Get the LP token address */
-        address _lpToken = IUniswapV2Factory(router.factory()).getPair(tokenA, tokenB);        
-
-        /** STEP FIVE -> Get PID for LP token 
-         * This is a temporary solution that should be improved, because 
-         * if you want to use the PID 0 then the function will not 
-         * distinguish between the PID 0 and the pid not passed.
-         * and it will calculate the PID for the LP token wasting gas.
-         * TODO: IMPROVE THIS LOGIC!! */
-        if (_pid == 0) {
-            _pid = getPID(_lpToken);
-        }
+        address _lpToken = IUniswapV2Factory(router.factory()).getPair(tokenA, tokenB);               
         
-        /** STEP SEVEN -> Check if must add to Masterchef or MasterchefV2, then approve and stake LP tokens */
+        /** STEP FIVE -> Calculate LPToken balance and approve */
+        uint256 thisBalance = IERC20(_lpToken).balanceOf(address(this));
+        
+        /** STEP SIX -> Deposit in Masterchef or MasterchefV2 */
         if (isMasterchefV2) {            
-            IERC20(_lpToken).approve(address(masterchefV2), IERC20(_lpToken).balanceOf(address(this)));
-            masterchefV2.deposit(_pid, IERC20(_lpToken).balanceOf(address(this)), address(this));   
+            IERC20(_lpToken).approve(address(masterchefV2), thisBalance);
+            masterchefV2.deposit(_poolId, thisBalance, address(this));   
         }else {            
-            IERC20(_lpToken).approve(address(masterchef), IERC20(_lpToken).balanceOf(address(this)));
-            masterchef.deposit(_pid, IERC20(_lpToken).balanceOf(address(this)));
+            IERC20(_lpToken).approve(address(masterchef),   thisBalance);
+            masterchef.deposit(_poolId, thisBalance);
         }        
 
-        emit LiquidityAdded(_lpToken, amountA, amountB);
+        emit LiquidityAdded(_lpToken, thisBalance);
 
     }
 
     /**
      * @dev Remove the liquidity from a LP token. 
+     *      NOTE: The event emited in this function can be avoided, as the Router and Masterchef are already emitting events for this interactions.
+     * 
      * @param _lpToken the address of the LP token to remove.
      * @param _amount the amount of LP token to remove.
      * @param isMasterchefV2 true if the LP token is in MasterchefV2, false if is in Masterchef.
      */
-    function removeLiquidity(address _lpToken, uint256 _amount, uint256 _pid, bool isMasterchefV2) onlyOwner public {                
+    function removeLiquidity(address _lpToken, uint256 _amount, uint256 _poolId, bool isMasterchefV2) onlyOwner public {       
+        require(_amount > 0, "SushiWallet: INVALID_AMOUNT");
+        require(_lpToken != address(0), "SushiWallet: INVALID_LP_TOKEN_ADDRESS");
+
+        /** STEP ONE -> Approve LP Token */
+        IERC20(_lpToken).approve(address(router), _amount);         
         
-        /** STEP ONE -> Get PID for LP token 
-         * This is a temporary solution that should be improved, because 
-         * if you want to use the PID 0 then the function will not 
-         * distinguish between the PID 0 and the pid not passed.
-         * and it will calculate the PID for the LP token wasting gas.
-         * TODO: IMPROVE THIS LOGIC!! */
-        if (_pid == 0) {
-            _pid = getPID(_lpToken);
-        }
-
-        /** STEP TWO -> Check if must Withdraw from Masterchef or MasterchefV2 */
+        /** STEP TWO -> Withdraw from Masterchef or MasterchefV2 */
         if (isMasterchefV2) {            
-            masterchefV2.withdrawAndHarvest(_pid, _amount, address(this));
+            masterchefV2.withdrawAndHarvest(_poolId, _amount, address(this));
         }else {
-            masterchef.withdraw(_pid, _amount);
+            masterchef.withdraw(_poolId, _amount);
         }
 
-        /** STEP FOUR -> Approve LP Token */
-        IERC20(_lpToken).approve(address(router), _amount);
-
-        /** STEP FIVE -> Remove Liquidity */
+        /** STEP THREE -> Remove Liquidity from Router */        
         router.removeLiquidity(IUniswapV2Pair(_lpToken).token0(), IUniswapV2Pair(_lpToken).token1(), _amount, 0, 0, address(this), block.timestamp);
-
-        emit LiquidityRemoved(_lpToken, _amount, _amount);
+    
+        emit LiquidityRemoved(_lpToken, _amount);
     }
     
     /**
-     * @dev Withdraw LP token without taking care about the rewards earned. 
-     * @param _lpToken the address of the LP token to withdraw
+     * @dev Withdraw LP token without taking care about the rewards earned.
+     *      NOTE: The event emited in this function can be avoided, as the Router and Masterchef are already emitting events for this interactions.
+     * 
+     * @param _poolId the pid of the pool to withdraw
      * @param isMasterchefV2 true if the LP token is in MasterchefV2, false if is in Masterchef
      */
-    function emergencyWithdraw(address _lpToken, bool isMasterchefV2) onlyOwner public {        
-        /** STEP ONE -> Get PID  */
-        uint256 _pid = getPID(_lpToken);
+    function emergencyWithdraw(uint256 _poolId, bool isMasterchefV2) onlyOwner public {                
 
-        /** STEP TWO -> Check if must Withdraw from Masterchef or MasterchefV2 */
+        /** STEP ONE -> Withdraw from Masterchef or MasterchefV2 */
         if (isMasterchefV2) {            
-            masterchefV2.emergencyWithdraw(_pid, address(this));
+            masterchefV2.emergencyWithdraw(_poolId, address(this));
         }else {
-            masterchef.emergencyWithdraw(_pid, address(this));
+            masterchef.emergencyWithdraw(_poolId);
         }
+
+        emit EmergencyWithdraw(_poolId, isMasterchefV2);
+    }
+
+    
+    /** ONLY FOR MASTERCHEFV2 !!!!
+     *      NOTE: The event emited in this function can be avoided, as the Router and Masterchef are already emitting events for this interactions.
+     * 
+     * @dev Allows the owner to harvest the tokens earned from MasterchefV2 without withdraw the LP Tokens.
+     * @param _poolId the pid of the pool to harvest.
+     */
+    function harvestRewards(uint256 _poolId) onlyOwner public {                                
+        masterchefV2.harvest(_poolId, address(this));   
+
+        emit HarvestedRewards(_poolId);
     }
 
     /**
-     * @dev Allows the owner to harvest tokens earned from staking in the Masterchef
-     * @param _lpToken the address of the LP token to harvest
-     * @param isMasterchefV2 true if the LP token is in MasterchefV2, false if is in Masterchef
+     * @dev Withdraw an specified amount of tokens from SushiWallet.
+     * @param _token the address of the token to withdraw.
+     * @param _amount the amount of the token to withdraw expressed in wei.
      */
-    function harvestRewards(address _lpToken, bool isMasterchefV2) onlyOwner public {        
-        
-        /** STEP ONE -> Get PID  */
-        uint256 _pid = getPID(_lpToken);
-        
-        if (isMasterchefV2 == true) {
-            masterchefV2.harvest(_pid, address(this));   
-        }else {
-            masterchef.deposit(_pid, 0);
-        }
-
-        emit harvestedRewards(_lpToken);
-
-    }
-
-    /**
-     * @dev Withdraws the specified amount of the specified token from the contract
-     * @param _token the address of the token to withdraw
-     * @param _amount the amount of the token to withdraw expressed in wei
-     */
-    function withdraw(address _token, uint256 _amount ) onlyOwner public {        
-        require(_amount <= IERC20(_token).balanceOf(address(this)), "Insufficient balance: CONTRACT");
+    function withdraw(address _token, uint256 _amount ) onlyOwner public {                
+        require(_token != address(0), "SushiWallet: INVALID_TOKEN_ADDRESS");
+        require(_amount > 0, "SushiWallet: INVALID_AMOUNT");        
+        require(_amount <= IERC20(_token).balanceOf(address(this)), "SushiWallet: INSUFFICIENT_BALANCE");
         IERC20(_token).transfer(msg.sender, _amount);
 
-        emit Withdraw(_token, _amount);
+        emit Withdraw(_token, _amount, msg.sender);
     }    
 
     /**
-     * @dev Sets the router address
-     * @param _newRouter the address of the new router     
+     * @dev Set a new Router address
+     * @param _newRouter the address of the new Router contract.
      */   
     function setRouter(address _newRouter) onlyOwner public {  
-        require(_newRouter != address(0), "INVALID ADDRESS");      
+        require(_newRouter != address(0), "SushiWallet: INVALID_ROUTER_ADDRESS");      
         router = IUniswapV2Router02(_newRouter);
+
         emit NewRouter(_newRouter);
     }
 
     /**
-     * @dev Sets the Masterchef address
-     * @param _newMasterchef the address of the new Masterchef
+     * @dev Set a the Masterchef address
+     * @param _newMasterchef the address of the new Masterchef contract.
      */
     function setMasterchef(address _newMasterchef) onlyOwner public {        
-        require(_newMasterchef != address(0), "INVALID ADDRESS");  
+        require(_newMasterchef != address(0), "SushiWallet: INVALID_MASTERCHEF_ADDRESS");  
         masterchef = IMasterChef(_newMasterchef);
+
         emit NewMasterchef(_newMasterchef);
     }
 
     /**
-     * @dev Sets the MasterchefV2 address
-     * @param _newMasterchefV2 the address of the new MasterchefV2
+     * @dev Set a new MasterchefV2 address
+     * @param _newMasterchefV2 the address of the new MasterchefV2 contract.
      */
     function setMasterchefV2(address _newMasterchefV2) onlyOwner public {        
-        require(_newMasterchefV2 != address(0), "INVALID ADDRESS");  
+        require(_newMasterchefV2 != address(0), "SushiWallet: INVALID_MASTERCHEFV2_ADDRESS");  
         masterchefV2 = IMiniChefV2(_newMasterchefV2);
+
         emit NewMasterchefV2(_newMasterchefV2);
     }    
-
-    /**
-     * @dev This fuction retrieves the PID of the LP token in Masterchef, 
-     * the PID is used when calling different functions of the Masterchef contracts.
-     * 
-     * WARNING: This function is not efficient as it will loop through all the pools in Masterchef until find the right PID. 
-     * 
-     * TODO: MUST improve this function to make it more efficient, for example:
-     * 1) Save the PID and the LP Token address in a mapping and then just retrieve it. 
-     * 
-     * @param _token the address of the token to check
-     */
-    function getPID(address _token) public view returns (uint256 _pid) {
-        require(_token != address(0), "INVALID ADDRESS");  
-        
-        for(uint i = 0; i < masterchef.poolLength(); i++) {
-            if(masterchef.poolInfo(i).lpToken == IERC20(_token)) {
-                return i;
-            }
-        }
-
-        revert("Error: Pool not found in Masterchef.");
-
-    }
-
 }
