@@ -1,7 +1,7 @@
 # ratherlabs-challenge
  This repository contains the solution to the Solidity coding challenge for Ratherlabs. The code implements a smart contract that satisfies the requirements specified in the challenge description. The contract has been tested and deployed on the Ethereum network to ensure its functionality. Feel free to review the code and leave comments or suggestions for improvement.
 
-##  Installation 
+
 Please follow these steps to set up the project:
 
 1) Clone the repository to your local machine.
@@ -18,6 +18,8 @@ Please follow these steps to set up the project:
 To ensure accurate and efficient testing, I ran the tests against a fork of the Ethereum blockchain at a specific **block (16588388)**. By interacting with a copy of the blockchain with a controlled state, I was able to test against specific smart contracts and balances. Using this approach also provided the benefit of being able to reset the blockchain state after each test, ensuring a clean and reliable environment for subsequent testing.
 
 Performing tests without forking requires relying on external contracts and balances, which may be in a different state or have unexpected behavior, making tests less reliable.
+
+![image from gas report ](TEST_REPORT.png)
 
 ## Audit
 I performed an audit using **Slither** to check for any potential errors and bugs in the code. Based on the report, everything appears to be in order. You can find the audit report located in the `/audits` folder.
