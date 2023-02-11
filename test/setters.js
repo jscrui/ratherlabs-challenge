@@ -9,7 +9,7 @@ describe("SushiWallet, Setters", function () {
 
     before(async function () {        
                 
-        [Owner, newRouter, newMasterchef, newMasterchefV2] = await ethers.getSigners();
+        [Owner, newOwner, newRouter, newMasterchef, newMasterchefV2] = await ethers.getSigners();
         
         //Deploy SushiWallet
         const sushiWallet = await ethers.getContractFactory("SushiWallet");
@@ -18,17 +18,17 @@ describe("SushiWallet, Setters", function () {
         
     });
     
-    it("Can set new Router via setRouter()", async function () {
+    it("Set new Router via setRouter()", async function () {
         SushiWallet.setRouter(newRouter.address);        
         expect(await SushiWallet.router()).to.equal(newRouter.address);
     });
 
-    it("Can set new MasterChef via setMasterChef()", async function () {        
+    it("Set new MasterChef via setMasterChef()", async function () {        
         SushiWallet.setMasterchef(newMasterchef.address);
         expect(await SushiWallet.masterchef()).to.equal(newMasterchef.address);
     });         
 
-    it("Can set new MasterChefV2 via setMasterChefV2()", async function () {
+    it("Set new MasterChefV2 via setMasterChefV2()", async function () {
         SushiWallet.setMasterchefV2(newMasterchefV2.address);
         expect(await SushiWallet.masterchefV2()).to.equal(newMasterchefV2.address);
     });
@@ -43,6 +43,12 @@ describe("SushiWallet, Setters", function () {
 
     it("Reject if 0x0 address is passed via setMasterChefV2()", async function () {
         expect(SushiWallet.setMasterchefV2(ethers.constants.AddressZero)).to.be.revertedWith("SushiWallet: INVALID_MASTERCHEFV2_ADDRESS");
+    });
+
+    it("Set new owner via transferOwnership()", async function () {
+
+        SushiWallet.transferOwnership(newOwner.address);
+        expect(await SushiWallet.owner()).to.equal(newOwner.address);
     });
 
 });
