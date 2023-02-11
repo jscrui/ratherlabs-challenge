@@ -30,3 +30,17 @@ This smart contract offers the following features:
 * Withdrawal of funds, emergency withdrawals, and harvesting of rewards.
 * The owner has the authority to change the addresses of the router, MasterChef, and MasterChefV2.
 
+## Tooling
+
+* Hardhat
+* Slither
+* Tenderly
+
+## Addresses
+
+Sushi Router = "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F"
+MasterChef = "0xc2EdaD668740f1aA35E4D8f227fB8E17dcA888Cd"
+MasterChefV2 = "0xEF0881eC094552b2e128Cf945EF17a6752B4Ec5d"    
+WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+SUSHI = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2"
+USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
