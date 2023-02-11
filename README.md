@@ -18,7 +18,7 @@ To ensure accurate and efficient testing, I ran the tests against a fork of the 
 Performing tests without forking requires relying on external contracts and balances, which may be in a different state or have unexpected behavior, making tests less reliable.
 
 ## Audit
-I performed an audit using **Slither** to check for any potential errors and bugs in the code. Based on the report, everything appears to be in order. You can find the audit report located in the /audit folder.
+I performed an audit using **Slither** to check for any potential errors and bugs in the code. Based on the report, everything appears to be in order. You can find the audit report located in the `/audits` folder.
 
 
 ## Features
