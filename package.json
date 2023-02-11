@@ -2,7 +2,9 @@
   "name": "ratherlabs-challenge",
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
-    "hardhat": "^2.12.6"
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
+    "hardhat": "^2.12.6",
+    "hardhat-gas-reporter": "^1.0.9"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.1",
