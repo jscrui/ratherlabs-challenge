@@ -13,6 +13,40 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./@sushiswap/contracts/interfaces/IMasterChef.sol";
 import "./@sushiswap/contracts/interfaces/IMiniChefV2.sol";
 
+/**
+ * @title SushiWallet
+ * @notice This smart contract allows the owner to execute a single transaction to provide liquidity and deposit of the LP token received in either SushiSwap's MasterChef or MasterChefV2.
+ *         It also allows for the withdrawal of funds from the contracts, as well as emergency withdrawals and harvesting of rewards.
+ *         The owner can also change the router, masterchef and masterchefV2 addresses.
+ *         
+ *         Owner should also check the code and use it only under their own responsibility.
+ *  
+ *          Hot to use:
+ * 
+ *          1. Deploy the contract.
+ *          2. Set the router, masterchef and masterchefV2 addresses.
+ *          3. Transfer the tokens you want to provide liquidity to the contract.
+ *          4. Call the addLiquidity() function.
+ *          
+ *          Then you can call:
+ * 
+ *          removeLiquidty() To remove liquidity and withdraw the LP token from the Masterchef.
+ *          harvestRewards() To harvest the rewards from the Masterchef. (Only for MasterchefV2)
+ *          emergencyWithdraw() To withdraw the LP token without taking care about the rewards.
+ *          withdraw() To withdraw any token from the contract to the owner address.
+ * 
+ *          And also you can:
+ *          
+ *          setRouter() To change the router address.
+ *          setMasterchef() To change the masterchef address.
+ *          setMasterchefV2() To change the masterchefV2 address.
+ *
+ * 
+ * @dev    This contract emits events that can be reduced to reduce the gas cost,
+ *         as the Router and Masterchef are already emitting events for the interactions.
+ *         This is done to make it easier to track the interactions with the contract.
+ */
+
 contract SushiWallet is Ownable {
 
     using SafeERC20 for IERC20;
@@ -28,12 +62,12 @@ contract SushiWallet is Ownable {
     event HarvestedRewards(uint256 indexed poolId);
     event NewRouter(address indexed router);
     event NewMasterchef(address indexed masterchef);
-    event NewMasterchefV2(address indexed masterchefV2);
+    event NewMasterchefV2(address indexed masterchefV2); 
     
-    constructor(address _router, address _masterchef, address _masterchefV2){
-        router = IUniswapV2Router02(_router);
-        masterchef = IMasterChef(_masterchef);
-        masterchefV2 = IMiniChefV2(_masterchefV2);             
+    constructor(address _router, address _masterchef, address _masterchefV2) {
+        router = IUniswapV2Router02(address(_router));
+        masterchef = IMasterChef(address(_masterchef));
+        masterchefV2 = IMiniChefV2(address(_masterchefV2));
     }
     
     /**
@@ -93,6 +127,7 @@ contract SushiWallet is Ownable {
      * 
      * @param _lpToken the address of the LP token to remove.
      * @param _amount the amount of LP token to remove.
+     * @param _poolId the pool id of the pool where the LP token is deposited.  
      * @param isMasterchefV2 true if the LP token is in MasterchefV2, false if is in Masterchef.
      */
     function removeLiquidity(address _lpToken, uint256 _amount, uint256 _poolId, bool isMasterchefV2) onlyOwner public {       
@@ -135,10 +170,10 @@ contract SushiWallet is Ownable {
     }
 
     
-    /** ONLY FOR MASTERCHEFV2 !!!!
-     *      NOTE: The event emited in this function can be avoided, as the Router and Masterchef are already emitting events for this interactions.
-     * 
+    /** ONLY FOR MASTERCHEFV2 POOLS
      * @dev Allows the owner to harvest the tokens earned from MasterchefV2 without withdraw the LP Tokens.
+     *      NOTE: The event emited in this function can be avoided, as the Router and Masterchef are already emitting events for this interactions.
+     *      
      * @param _poolId the pid of the pool to harvest.
      */
     function harvestRewards(uint256 _poolId) onlyOwner public {                                
