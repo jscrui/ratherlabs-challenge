@@ -6,7 +6,7 @@ Please follow these steps to set up the project:
 
 1) Clone the repository to your local machine.
 2) Run `npm i` to install the necessary dependencies.
-3) Create a `.env` file in the root folder and add the following line: `ALCHEMY_PRIVATE_KEY="Your-alchemy-private-key"`. 
+3) Create a `.env` file in the root folder and add the following line: `ALCHEMY_PRIVATE_KEY="Your-alchemy-private-key"`.   
 If you don't have an Alchemy private key, you can obtain one from https://dashboard.alchemy.com/.
 
 It's important to note that if you plan to deploy this contract on **mainnet**, you should also include your private key in the .env file with the following line: `PRIVATE_KEY="your_private_key"`.
