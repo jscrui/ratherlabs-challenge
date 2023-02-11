@@ -30,6 +30,10 @@ This smart contract offers the following features:
 * Withdrawal of funds, emergency withdrawals, and harvesting of rewards.
 * The owner has the authority to change the addresses of the router, MasterChef, and MasterChefV2.
 
+## Gas Report 
+
+![image from gas report ](gas_report.png)
+
 ## Tooling
 
 * Hardhat
