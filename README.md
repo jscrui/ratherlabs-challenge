@@ -28,8 +28,3 @@ This smart contract offers the following features:
 * Withdrawal of funds, emergency withdrawals, and harvesting of rewards.
 * The owner has the authority to change the addresses of the router, MasterChef, and MasterChefV2.
 
-## Contributing
-
-## License
-
-Feel free to customize this structure to fit your specific needs. And if you have any additional questions or need further assistance, just let me know!
