@@ -32,7 +32,7 @@ This smart contract offers the following features:
 
 ## Gas Report 
 
-![image from gas report ](gas_report.png)
+![image from gas report ](GAS_REPORT.png)
 
 ## Tooling
 
