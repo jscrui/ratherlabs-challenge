@@ -1,3 +1,4 @@
+require('dotenv').config();
 require("@nomicfoundation/hardhat-chai-matchers");
 require("hardhat-gas-reporter");
 
@@ -18,7 +19,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: "https://eth-mainnet.g.alchemy.com/v2/D3PM3hdkUDmlaYQp7UJXw0nbpWO4ufCh",
+        url: "https://eth-mainnet.g.alchemy.com/v2/"+process.env.ALCHEMY_PRIVATE_KEY,
         blockNumber: 16588388,        
       },
     },
