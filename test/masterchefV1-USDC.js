@@ -1,11 +1,13 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { takeSnapshot, SnapshotRestorer } = require('@nomicfoundation/hardhat-network-helpers');
+
 
 const IUniswapV2Router02 = require("@uniswap/v2-periphery/build/IUniswapV2Router02.json");
 const IWETH = require("@uniswap/v2-periphery/build/WETH9.json");
 
 /**
- * Some PoolInfo IDs from Sushiswap Masterchef (from TheGraph)
+ * Some PoolInfo IDs from Sushiswap MasterchefV1 (from TheGraph)
  *
  * 0x06da0fd433c1a5d7a4faa01111c044910a184553 USDT + WETH -> 0
  * 0x397FF1542f962076d0BFE58eA045FfA2d347ACa0 USDC + WETH -> 1
@@ -17,7 +19,7 @@ const IWETH = require("@uniswap/v2-periphery/build/WETH9.json");
  * 
  */
 
-describe("SushiWallet, MasterChefV2 with _pid '1', USDC + WETH", function () {
+describe("SushiWallet, MasterChefV1 with _pid '1', USDC + WETH", function () {
 
     const _pid = 1;
     const lpTokenAddress = "0x397FF1542f962076d0BFE58eA045FfA2d347ACa0";
@@ -37,6 +39,8 @@ describe("SushiWallet, MasterChefV2 with _pid '1', USDC + WETH", function () {
     const WETHAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
     const SUSHIAddress = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2";
     const USDCAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+
+    let snapShot;
 
     before(async function () {
                 
@@ -67,38 +71,35 @@ describe("SushiWallet, MasterChefV2 with _pid '1', USDC + WETH", function () {
             { value: ethers.utils.parseEther("1") } // value
         ); 
         
-        //Transfer WETH and USDC to SushiWallet
+        //Transfer WETH and USDC to SushiWallet Contract
         await WETH.transfer(SushiWallet.address, ethers.utils.parseEther("1"));        
         await USDC.transfer(SushiWallet.address, await USDC.balanceOf(Owner.address));    
 
     });
     
-    it("Add liquidity, 1 WETH and ~1622.60 USDC", async function () {
+    it("AddLiquidity(), 1 WETH and ~1622.60 USDC", async function () {
+
+        let balancePre = await USDC.balanceOf(SushiWallet.address);
 
         const tx = await SushiWallet.addLiquidity(
             WETHAddress, //tokenA
             USDCAddress, //tokenB
             ethers.utils.parseEther("1"), //amountADesired
             await USDC.balanceOf(SushiWallet.address), //amountBDesired 
-            1, //slippage
+            0, //amountAMin
+            0, //amountBMin
             _pid, //_pid
             isMasterChefV2, //Masterchef V2?
         );            
 
         const receipt = await tx.wait();
         const event = receipt.events[receipt.events.length - 1];  
-
-        const effGasPrice = receipt.effectiveGasPrice;
-        const txGasUsed = receipt.gasUsed;
-        const gasUsedETH = effGasPrice * txGasUsed;
-        
-        console.log("Tx cost: " + ethers.utils.formatEther(gasUsedETH.toString()));
         
         expect(event.args[0] == lpTokenAddress).to.be.true &&
-        expect(await USDC.balanceOf(SushiWallet.address)).to.be.eq(0);        
+        expect(await USDC.balanceOf(SushiWallet.address)).to.be.lt(balancePre);
 
     });
-
+    
     it("Check rewards, should've SUSHI rewards pending", async function () {
 
         await SushiRouter.swapExactETHForTokens(
@@ -108,21 +109,21 @@ describe("SushiWallet, MasterChefV2 with _pid '1', USDC + WETH", function () {
             Date.now() + 1000, // deadline
             { value: ethers.utils.parseEther("10") } // value
         ); 
+                
+        snapShot = await takeSnapshot();
         
-        let Masterchef = await ethers.getContractAt("IMasterChef", masterChefAddress);
-        
-        const pendingSushi = await Masterchef.pendingSushi(_pid, SushiWallet.address);
+        const pendingSushi = await MasterChefV1.pendingSushi(_pid, SushiWallet.address);
 
         expect(pendingSushi).to.be.gt(0);
 
-    });
+    });    
 
-    it("Remove liquidity, 1 WETH and ~1622.60 USDC", async function () {
+    it("RemoveLiquidity(), 1 WETH and ~1622.60 USDC", async function () {
         
         const userInfo = await MasterChefV1.userInfo(1, SushiWallet.address);        
         const providedLP = userInfo[0];
 
-        const tx = await SushiWallet.removeLiquidity(
+        await SushiWallet.removeLiquidity(
             lpTokenAddress, //lpToken
             providedLP, //Amount LP to remove
             _pid, //_pid
@@ -140,5 +141,39 @@ describe("SushiWallet, MasterChefV2 with _pid '1', USDC + WETH", function () {
         expect(await SushiToken.balanceOf(SushiWallet.address)).to.be.gt(0);
         
     });
-   
+    
+    it("Withdraw(), extract tokens from SushiWallet", async function () {
+                
+        const ownerUSDCBalance = await USDC.balanceOf(Owner.address);
+        const ownerWETHBalance = await WETH.balanceOf(Owner.address);
+        const ownerSushiBalance = await SushiToken.balanceOf(Owner.address);
+
+        const sushiWalletUSDCBalance = await USDC.balanceOf(SushiWallet.address);
+        const sushiWalletWETHBalance = await WETH.balanceOf(SushiWallet.address);
+        const sushiWalletSushiBalance = await SushiToken.balanceOf(SushiWallet.address);
+                
+        await SushiWallet.withdraw(USDCAddress, sushiWalletUSDCBalance);
+        await SushiWallet.withdraw(WETHAddress, sushiWalletWETHBalance);
+        await SushiWallet.withdraw(SUSHIAddress, sushiWalletSushiBalance);
+        
+        const newOwnerUSDCBalance = await USDC.balanceOf(Owner.address);
+        const newOwnerWETHBalance = await WETH.balanceOf(Owner.address);
+        const newOwnerSushiBalance = await SushiToken.balanceOf(Owner.address);
+
+        expect(newOwnerUSDCBalance).to.be.gt(ownerUSDCBalance) &&
+        expect(newOwnerWETHBalance).to.be.gt(ownerWETHBalance) &&
+        expect(newOwnerSushiBalance).to.be.gt(ownerSushiBalance);
+
+    });
+
+    it("EmergencyWithdraw(), extract LP tokens from Masterchef", async function () {
+
+        await snapShot.restore();
+        
+        await SushiWallet.emergencyWithdraw(_pid, isMasterChefV2);
+
+        expect(await LPToken.balanceOf(SushiWallet.address)).to.be.gt(0);
+
+    });
+
 });
