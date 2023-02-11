@@ -4,6 +4,7 @@ pragma solidity ^0.8.1;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
@@ -13,6 +14,8 @@ import "./@sushiswap/contracts/interfaces/IMasterChef.sol";
 import "./@sushiswap/contracts/interfaces/IMiniChefV2.sol";
 
 contract SushiWallet is Ownable {
+
+    using SafeERC20 for IERC20;
 
     IUniswapV2Router02 public router;
     IMasterChef public masterchef;   
@@ -59,8 +62,8 @@ contract SushiWallet is Ownable {
         require(IERC20(tokenB).balanceOf(address(this)) >= amountB, 'SushiWallet: INSUFFICIENT_BALANCE_TOKEN_B');            
 
         /** STEP ONE -> Approve tokens */
-        IERC20(tokenA).approve(address(router), amountA);                   
-        IERC20(tokenB).approve(address(router), amountB);        
+        IERC20(tokenA).safeApprove(address(router), amountA);                   
+        IERC20(tokenB).safeApprove(address(router), amountB);        
 
         /** STEP THREE -> Add Liquidity */
         IUniswapV2Router02(router).addLiquidity(tokenA, tokenB, amountA, amountB, minAmountA, minAmountB, address(this), block.timestamp);                        
@@ -73,10 +76,10 @@ contract SushiWallet is Ownable {
         
         /** STEP SIX -> Deposit in Masterchef or MasterchefV2 */
         if (isMasterchefV2) {            
-            IERC20(_lpToken).approve(address(masterchefV2), thisBalance);
+            IERC20(_lpToken).safeApprove(address(masterchefV2), thisBalance);
             masterchefV2.deposit(_poolId, thisBalance, address(this));   
         }else {            
-            IERC20(_lpToken).approve(address(masterchef),   thisBalance);
+            IERC20(_lpToken).safeApprove(address(masterchef),   thisBalance);
             masterchef.deposit(_poolId, thisBalance);
         }        
 
@@ -97,7 +100,7 @@ contract SushiWallet is Ownable {
         require(_lpToken != address(0), "SushiWallet: INVALID_LP_TOKEN_ADDRESS");
 
         /** STEP ONE -> Approve LP Token */
-        IERC20(_lpToken).approve(address(router), _amount);         
+        IERC20(_lpToken).safeApprove(address(router), _amount);         
         
         /** STEP TWO -> Withdraw from Masterchef or MasterchefV2 */
         if (isMasterchefV2) {            
@@ -153,7 +156,8 @@ contract SushiWallet is Ownable {
         require(_token != address(0), "SushiWallet: INVALID_TOKEN_ADDRESS");
         require(_amount > 0, "SushiWallet: INVALID_AMOUNT");        
         require(_amount <= IERC20(_token).balanceOf(address(this)), "SushiWallet: INSUFFICIENT_BALANCE");
-        IERC20(_token).transfer(msg.sender, _amount);
+        
+        IERC20(_token).safeTransfer(msg.sender, _amount);
 
         emit Withdraw(_token, _amount, msg.sender);
     }    
