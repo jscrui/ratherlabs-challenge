@@ -14,7 +14,7 @@ It's important to note that if you plan to deploy this contract on **mainnet**, 
 5) Finally, on the same terminal you can run `npx hardhat run scripts/deploy.js` to deploy SushiWallet to Ethereum Mainnet.  
 
 ## Testing
-To ensure accurate and efficient testing, I ran the tests against a fork of the Ethereum blockchain at a specific `block (16588388)`. By interacting with a copy of the blockchain with a controlled state, I was able to test against specific smart contracts and balances. Using this approach also provided the benefit of being able to reset the blockchain state after each test, ensuring a clean and reliable environment for subsequent testing.
+To ensure accurate and efficient testing, I ran the tests against a fork of the Ethereum blockchain at a specific **block (16588388)**. By interacting with a copy of the blockchain with a controlled state, I was able to test against specific smart contracts and balances. Using this approach also provided the benefit of being able to reset the blockchain state after each test, ensuring a clean and reliable environment for subsequent testing.
 
 Performing tests without forking requires relying on external contracts and balances, which may be in a different state or have unexpected behavior, making tests less reliable.
 
