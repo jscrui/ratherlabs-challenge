@@ -44,3 +44,15 @@ This smart contract offers the following features:
     WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"   
     SUSHI = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2"   
     USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"   
+
+## Conclusion
+
+Thank you for checking out my solution to this challenge! 
+
+I did my best to keep the code as simple and straightforward as possible, but I acknowledge that there is still room for improvement.
+
+If you have any questions or feedback, please feel free to reach out to me.
+
+
+
+
