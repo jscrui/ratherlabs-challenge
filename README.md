@@ -51,6 +51,14 @@ This smart contract offers the following features:
     SUSHI = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2"   
     USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"   
 
+## Links and Resources
+ 
+ [SushiSwap - Subgraph](https://thegraph.com/hosted-service/subgraph/sushiswap/sushiswap)   
+ [MasterChefV2 - Subgraph](https://thegraph.com/hosted-service/subgraph/sushiswap/master-chef)   
+ [MasterChefV2 - Subgraph](https://thegraph.com/hosted-service/subgraph/sushiswap/master-chefv2)   
+ [SushiSwap - Documentation](https://thegraph.com/hosted-service/subgraph/sushiswap/sushiswap)   
+ [Tenderly - Tool](https://dashboard.tenderly.co/)
+
 ## Conclusion
 
 Thank you for checking out my solution to this challenge! 
