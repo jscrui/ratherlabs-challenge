@@ -21,9 +21,8 @@ module.exports = {
       forking: {
         url: "https://eth-mainnet.g.alchemy.com/v2/"+process.env.ALCHEMY_PRIVATE_KEY,
         blockNumber: 16588388,        
-      },
-    },
       },      
+    },   
     mainnet: {
       url: "https://eth-mainnet.g.alchemy.com/v2/"+process.env.ALCHEMY_PRIVATE_KEY,
       accounts: process.env.PRIVATE_KEY
